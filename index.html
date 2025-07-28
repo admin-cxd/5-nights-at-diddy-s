@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Five nights at diddy's</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      background: #111;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="game"></canvas>
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    let W = window.innerWidth;
+    let H = window.innerHeight;
+    canvas.width = W;
+    canvas.height = H;
+
+    const player = { x: W / 2, y: H / 2, size: 20, speed: 5, health: 100 };
+    const bullets = [];
+    const enemies = [];
+
+    const keys = {};
+    document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+    document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+    window.addEventListener("resize", () => {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+    });
+
+    function spawnEnemy() {
+      const edge = Math.random() < 0.5 ? "x" : "y";
+      const enemy = {
+        x: edge === "x" ? (Math.random() < 0.5 ? 0 : W) : Math.random() * W,
+        y: edge === "y" ? (Math.random() < 0.5 ? 0 : H) : Math.random() * H,
+        size: 20,
+        speed: Math.random() * 4 + 3 // Between 3 and 7
+      };
+      enemies.push(enemy);
+    }
+    setInterval(spawnEnemy, 1000);
+
+    canvas.addEventListener("click", e => {
+      const angle = Math.atan2(e.clientY - (player.y + player.size / 2), e.clientX - (player.x + player.size / 2));
+      bullets.push({
+        x: player.x + player.size / 2,
+        y: player.y + player.size / 2,
+        size: 5,
+        dx: Math.cos(angle) * 8,
+        dy: Math.sin(angle) * 8
+      });
+    });
+
+    function update() {
+      if (keys["w"]) player.y -= player.speed;
+      if (keys["s"]) player.y += player.speed;
+      if (keys["a"]) player.x -= player.speed;
+      if (keys["d"]) player.x += player.speed;
+
+      bullets.forEach(b => {
+        b.x += b.dx;
+        b.y += b.dy;
+      });
+
+      enemies.forEach(e => {
+        const dx = player.x - e.x;
+        const dy = player.y - e.y;
+        const dist = Math.hypot(dx, dy);
+        e.x += (dx / dist) * e.speed;
+        e.y += (dy / dist) * e.speed;
+
+        if (Math.abs(player.x - e.x) < player.size &&
+          Math.abs(player.y - e.y) < player.size) {
+          player.health -= 0.5;
+        }
+      });
+
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        for (let j = enemies.length - 1; j >= 0; j--) {
+          const b = bullets[i], e = enemies[j];
+          if (Math.abs(b.x - e.x) < e.size && Math.abs(b.y - e.y) < e.size) {
+            bullets.splice(i, 1);
+            enemies.splice(j, 1);
+            break;
+          }
+        }
+      }
+    }
+
+    function drawHealthBar() {
+      ctx.fillStyle = "#222";
+      ctx.fillRect(20, 20, 200, 20);
+      ctx.fillStyle = "#0f0";
+      ctx.fillRect(20, 20, Math.max(0, player.health * 2), 20);
+      ctx.strokeStyle = "#fff";
+      ctx.strokeRect(20, 20, 200, 20);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "blue";
+      ctx.fillRect(player.x, player.y, player.size, player.size);
+
+      ctx.fillStyle = "white";
+      bullets.forEach(b => ctx.fillRect(b.x, b.y, b.size, b.size));
+
+      ctx.fillStyle = "red";
+      enemies.forEach(e => ctx.fillRect(e.x, e.y, e.size, e.size));
+
+      drawHealthBar();
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+
+</html>
